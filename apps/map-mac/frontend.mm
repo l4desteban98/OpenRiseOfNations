@@ -73,8 +73,8 @@ const char* const kListTitles[4] = {"Main Menu", "Tutorials", "Skirmish", "Scena
 const char* const kListNotes[4] = {
     "",
     "Start with Tutorial 1. The tutorials guide you with voice-overs, arrows and objectives.",
-    ("You play the map's human player against computer opponents. Random maps and the full skirmish setup (nations, "
-     "teams, map size) are not supported yet."),
+    ("Choose a map, then Play to configure civilizations, computer opponents, teams and rules. "
+     "Uses existing starting positions; random maps are not available yet."),
     "Chess exercises and the battle maps of the Conquer the World campaigns.",
 };
 
@@ -1210,7 +1210,9 @@ NSCursor* ron_game_cursor(const ron::GameFiles& files, int cid) {
 	[self click];
 	[self remember];
 	const int diff = _screen == kTutorials ? -1 : _difficulty;
-	[self.host frontEndPlay:@(_entries[size_t(_sel)].path.c_str()) difficulty:diff];
+	if (_screen == kSkirmish)
+		[self.host frontEndConfigureSkirmish:@(_entries[size_t(_sel)].path.c_str()) difficulty:diff];
+	else [self.host frontEndPlay:@(_entries[size_t(_sel)].path.c_str()) difficulty:diff];
 }
 
 - (void)activate:(int)h {

@@ -14,6 +14,14 @@ adaptation of the *Extended Edition* logo.)
 
 ---
 
+## Fork: custom skirmish setup
+
+This fork adds a native setup dialog after choosing a Skirmish map: civilization, human/computer/closed positions,
+teams, global AI difficulty, visibility, stockpiles and conquest/map victory settings. It uses the map's existing
+positions and starting armies/technologies; it does not generate random maps. See [scope and testing](docs/custom-skirmish.md).
+
+Build this fork to use the feature; the upstream 0.1.1 DMG does not include it.
+
 ## Contents
 
 - [Quick start (download the app)](#quick-start-download-the-app)
