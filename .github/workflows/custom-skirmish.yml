@@ -2,8 +2,10 @@ name: Custom skirmish checks
 on:
   push:
     branches: [main, 'feat/**']
-  pull_request:
   workflow_dispatch:
+concurrency:
+  group: custom-skirmish-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

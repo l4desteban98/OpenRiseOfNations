@@ -54,8 +54,8 @@ void configure_skirmish(Scenario& map, const SkirmishSetup& s, int tribe_count) 
         if (p.who < 0 || p.who >= 8) continue;
         p.tribe = s.seats[size_t(p.who)].tribe;
         p.is_human = p.who == s.human ? 4 : 0;
-        // Remove scenario-only co-op, no-defeat and disabled unit/combat AI flags.
-        p.leader_flags &= ~(0x400u | 0x200u | 0x40u | 0x1u);
+        // Remove scenario-only co-op, no-defeat and disabled unit/production/combat AI flags.
+        p.leader_flags &= ~(0x400u | 0x200u | 0x40u | 0x2u | 0x1u);
         p.difficulty = s.difficulty;
         p.diplomacy.clear();
         p.has_diplomacy = true;
