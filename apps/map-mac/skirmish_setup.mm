@@ -2,6 +2,7 @@
 #include "assets/files.hpp"
 #include "sim/rules.hpp"
 #include <exception>
+#include <stdexcept>
 #include <vector>
 
 namespace {

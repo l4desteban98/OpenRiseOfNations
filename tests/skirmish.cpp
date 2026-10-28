@@ -17,7 +17,7 @@ Scenario fixture() {
     for (int who : {1, 3, 6}) {
         ScenarioPlayer p;
         p.who = who; p.tribe = who; p.is_human = who == 3 ? 4 : 0;
-        p.leader_flags = 0x400;
+        p.leader_flags = 0x400 | 0x200 | 0x40 | 0x1;
         p.techs = {"preserved tech"};
         p.child_order = {38, 41, 44};
         p.stockpile = {{0, 123}};
@@ -64,7 +64,7 @@ int main() {
     assert(map.terrain.xs == 48 && map.player(3)->techs == original.player(3)->techs);
     assert(map.scenario_flags == 4 && map.game_rules == 0 && map.victory == 2 && map.time_limit == 0);
     for (const auto& p : map.players) {
-        assert(!(p.leader_flags & 0x400));
+        assert(!(p.leader_flags & (0x400 | 0x200 | 0x40 | 0x1)));
         assert(p.stockpile.size() == 6);
         for (const auto& st : p.stockpile) assert(st.amount == 500);
         for (const auto& d : p.diplomacy) assert(d.diplo == (d.who == p.who ? 2 : 0));

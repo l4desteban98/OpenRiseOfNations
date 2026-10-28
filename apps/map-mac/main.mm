@@ -853,8 +853,17 @@ static hud::Resources hud_resources(const ron::sim::Game* g, int who) {
 		std::printf("objects: %zu buildings, %zu units, %zu goods, %zu farms (%zu animal pens), %zu without a graphic\n", nb, nu,
 		            _placedGoods.size(), _farms.size(), pens, bf.unresolved.size());
 		for (size_t i = 0; i < 8; i++) {
+			if (g_skirmish && int(i) != g_skirmish->human) continue;
 			if (sc.camera_x[i] >= 0 && sc.camera_y[i] >= 0) {
 				_startCamera = simd_make_float3(float(sc.camera_x[i]), float(sc.camera_y[i]), 0);
+				_hasStartCamera = true;
+				break;
+			}
+		}
+		if (g_skirmish && !_hasStartCamera) {
+			for (const auto& building : sc.buildings) {
+				if (building.who != g_skirmish->human || !building.city) continue;
+				_startCamera = simd_make_float3(float(building.cx), float(building.cy), 0);
 				_hasStartCamera = true;
 				break;
 			}
