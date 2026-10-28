@@ -85,6 +85,8 @@
 #include "sim/anim_assets.hpp"
 #include "sim/commands.hpp"
 #include "sim/game.hpp"
+#import "skirmish_setup.h"
+#include <optional>
 #include "sim/rules.hpp"
 #include "sim/rules_xml.hpp"
 #include "sim/script_host.hpp"
@@ -368,6 +370,7 @@ static int64_t sim_key(int32_t who, int32_t o, int32_t guy = 0) { return (int64_
 // GameInfo difficulty from --difficulty (0 easiest .. 5; -1 keeps the default 2). AI armies only attack once they
 // have enough standard units for the current military epoch (ai-spec find_target); in tut5 that takes difficulty 4.
 static int g_difficulty = -1;
+static std::optional<ron::sim::SkirmishSetup> g_skirmish;
 
 // Debugging aid: RON_SKIP=floor,land,trans,coral,water skips those passes.
 static bool debug_skip(const char* pass) {
@@ -697,7 +700,11 @@ static hud::Resources hud_resources(const ron::sim::Game* g, int who) {
 		_ammo = ron::load_ammo_catalog(files, anim_names);
 		std::string path = scenarioPath.UTF8String;
 		if (!files.resolve(path).empty()) path = files.resolve(path);  // allow paths relative to the game dir
-		const ron::Scenario sc = ron::parse_scenario(ron::read_file(path));
+		ron::Scenario sc = ron::parse_scenario(ron::read_file(path));
+		if (g_skirmish) {
+			const auto setupRules = ron::sim::load_rules(files);
+			ron::sim::configure_skirmish(sc, *g_skirmish, int(setupRules.tribes.size()));
+		}
 		const ron::Tileset ts = ron::load_tileset(files, sc.terrain.tileset);
 		const std::vector<ron::TransitionMask> masks = ron::load_transition_masks(files);
 		_mesh = ron::build_terrain_mesh(sc.terrain, ts, &masks, sc.world_seed);
@@ -772,11 +779,19 @@ static hud::Resources hud_resources(const ron::sim::Game* g, int who) {
 		if (_simEnabled) {
 			try {
 				_simRules = std::make_unique<ron::sim::Rules>(ron::sim::load_rules(files));
-				ron::sim::start_game(*_simRules, ron::sim::GameSetup());
+				ron::sim::GameSetup ruleSetup;
+				if (g_skirmish) {
+					ruleSetup.starting_technology = sc.start_tech;
+					ruleSetup.ending_technology = sc.end_tech;
+					ruleSetup.game_rules = sc.game_rules;
+					ruleSetup.flag8 = (sc.scenario_flags & 4) != 0;
+				}
+				ron::sim::start_game(*_simRules, ruleSetup);
 				_art = ron::sim::load_anim_source(files, *_simRules);
 				_game = std::make_unique<ron::sim::Game>();
 				_game->anims = _art.get();
 				if (g_difficulty >= 0) _game->info.difficulty = uint8_t(g_difficulty);
+				if (g_skirmish) ron::sim::configure_skirmish_info(_game->info, *g_skirmish);
 				_game->load(files, sc, *_simRules, _simSeed);
 				// Scenario, general powers and AI production scripts (sim/script_host.hpp).
 				const ron::sim::ScriptLoadReport srep = ron::sim::script_host_load(*_game, files, path, sc);
@@ -785,6 +800,7 @@ static hud::Resources hud_resources(const ron::sim::Game* g, int who) {
 				_prevView = _curView;
 				[self indexPrevView];
 			} catch (const std::exception& e) {
+				if (g_skirmish) throw;
 				std::fprintf(stderr, "simulation unavailable (%s); drawing the scenario's units where they stand\n", e.what());
 				_game.reset();
 			}
@@ -837,8 +853,17 @@ static hud::Resources hud_resources(const ron::sim::Game* g, int who) {
 		std::printf("objects: %zu buildings, %zu units, %zu goods, %zu farms (%zu animal pens), %zu without a graphic\n", nb, nu,
 		            _placedGoods.size(), _farms.size(), pens, bf.unresolved.size());
 		for (size_t i = 0; i < 8; i++) {
+			if (g_skirmish && int(i) != g_skirmish->human) continue;
 			if (sc.camera_x[i] >= 0 && sc.camera_y[i] >= 0) {
 				_startCamera = simd_make_float3(float(sc.camera_x[i]), float(sc.camera_y[i]), 0);
+				_hasStartCamera = true;
+				break;
+			}
+		}
+		if (g_skirmish && !_hasStartCamera) {
+			for (const auto& building : sc.buildings) {
+				if (building.who != g_skirmish->human || !building.city) continue;
+				_startCamera = simd_make_float3(float(building.cx), float(building.cy), 0);
 				_hasStartCamera = true;
 				break;
 			}
@@ -4034,13 +4059,30 @@ static int vk_of(NSEvent* e) {
 	[self.window makeFirstResponder:self.view];
 }
 
+- (void)frontEndConfigureSkirmish:(NSString*)scenario difficulty:(int)difficulty {
+	ron::sim::SkirmishSetup setup;
+	NSString* error = nil;
+	if (!choose_skirmish_setup(self.gameDir, scenario, difficulty, setup, &error)) {
+		if (error) [self.menu showError:error];
+		return;
+	}
+	g_skirmish = setup;
+	[self startFrontEndMatch:scenario difficulty:setup.difficulty];
+}
+
 - (void)frontEndPlay:(NSString*)scenario difficulty:(int)difficulty {
+	g_skirmish.reset();
+	[self startFrontEndMatch:scenario difficulty:difficulty];
+}
+
+- (void)startFrontEndMatch:(NSString*)scenario difficulty:(int)difficulty {
 	[self.menu setBusy:@"Loading…"];
 	[self.view draw];
 	dispatch_async(dispatch_get_main_queue(), ^{
 		g_difficulty = difficulty;
 		NSString* err = nil;
 		MapRenderer* r = [[MapRenderer alloc] initWithDevice:self.device gameDir:self.gameDir scenario:scenario simulate:YES seed:12345 error:&err];
+		g_skirmish.reset();
 		if (!r) {
 			[self.menu setBusy:nil];
 			[self.menu showError:[NSString stringWithFormat:@"Could not load the scenario: %@", err ?: @"unknown error"]];

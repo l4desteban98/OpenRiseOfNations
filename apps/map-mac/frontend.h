@@ -15,6 +15,7 @@
 @protocol FrontEndHost <NSObject>
 // Play a scenario (path relative to the install); difficulty 0..5, or -1 to keep the scenario's default (tutorials).
 - (void)frontEndPlay:(NSString*)scenario difficulty:(int)difficulty;
+- (void)frontEndConfigureSkirmish:(NSString*)scenario difficulty:(int)difficulty;
 - (void)frontEndChangeFolder;
 - (void)frontEndQuit;
 @end

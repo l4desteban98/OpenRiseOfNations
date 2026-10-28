@@ -1,0 +1,26 @@
+name: Custom skirmish checks
+on:
+  push:
+    branches: [main, 'feat/**']
+  workflow_dispatch:
+concurrency:
+  group: custom-skirmish-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/run-skirmish.sh
+  macos-build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/run-skirmish.sh
+      - run: bash build-mac.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ronmap-macos-arm64
+          path: build/ronmap
